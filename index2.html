@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>BB Admin Panel</title>
+	<meta http-equiv="Content-type" content="text/html; charset=utf-8">	
+	
+	<link rel="stylesheet" type="text/css" href="./style/admin.css">
+	<script src="./scripts/jquery-1.9.1.min.js"></script>	
+	<script src="./scripts/baasbox.js"></script>	
+	<script src="./scripts/adminScripts.js"></script>		
+	<script type="text/javascript" charset="utf-8">	
+	
+	var endPoint = "http://localhost:9000";
+
+	$(document).ready(function() {
+		
+		BaasBox.setEndPoint(endPoint);
+		login("admin","admin","1234567890",loginDone,loginFail);
+			
+			var str = $("#ta").val();
+			var url = "http://localhost:9000/document/stamps";
+			
+			$("#btn").click(function(){
+				
+			    $.ajax(
+					
+					{url: url, 
+					//data: {count:true}	,
+					//data:{fields:"distinct(serie) as serDistinc"},	
+						data:{"where":"1=1","page":3,"recordsPerPage":"16","orderBy":"title asc"},
+						//data: {fields:"*",where:"1=1",page:0,recordsPerPage:2,orderBy:"title asc"},	
+					success: function(result){
+			        	$("#resultDiv").text(JSON.stringify(result.data));
+						//result.data[0].totalCount);//
+						//$("#resultDiv2").html(list(result));
+			    	},
+					fail: function(jqXHR, textStatus){
+						console.log(textStatus);
+					}
+					
+				});
+			});			
+	});
+	
+	function loginDone(user){
+		loggedIn = true;
+		$("#messageDiv").text("ok");
+	}
+	
+	function login(userName,password,appCode,done,fail){
+		BaasBox.appcode = appCode;
+		BaasBox.login(userName,password)
+		.done(function (user) {
+			done(user);
+		})
+		.fail(function (err) {
+			fail(err);
+		})		
+	}
+		
+	function loginFail(err){
+		$("#messageDiv").text("Error! Can not log in");
+	}
+	
+	function list(obj){
+		var str = "";
+		for(var i=0;i<obj.data.length;i++){
+			str+=obj.data[i].cs+"<br>";
+		}
+		return str;
+	}
+	
+	</script>	
+</head>
+<body>
+	<div id="messageDiv"></div>
+	<textarea id="ta" rows="4" cols="50"></textarea>
+	<div id="resultDiv"></div>
+	<div id="resultDiv2"></div>
+	<button id="btn">btn</button>
+</body>
+</html>

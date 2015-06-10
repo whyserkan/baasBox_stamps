@@ -1,0 +1,39 @@
+.keys {
+	font-size: 20 px;
+}
+
+table td {
+    border: 1px solid #8EA6C1;
+    border-width: thin;
+    padding-left: 5px;
+    padding-right: 5px;
+		padding-top: 2px;
+		padding-bottom: 2px;
+}
+
+.imageClass{
+	position :relative;
+	left:200px;
+	right:0;px
+	width:300px;
+}
+
+img {
+	width:100px;
+}
+.center{
+	text-alignment:center;
+}
+
+#loginDiv{
+	position:relative;
+	left:2000 px;
+	top:200 px;
+}
+
+.logOutClass{
+	position :absolute;
+	right:10px;
+	top:10px;
+	
+}
