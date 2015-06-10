@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>BB Admin Panel</title>
+	<meta http-equiv="Content-type" content="text/html; charset=utf-8">	
+	
+	<link rel="stylesheet" type="text/css" href="./style/admin.css">
+	<script src="./scripts/jquery-1.9.1.min.js"></script>	
+	<script src="./scripts/baasbox.js"></script>	
+	<script src="./scripts/adminScripts.js"></script>		
+	<script type="text/javascript" charset="utf-8">	
+	
+	var loggedIn = false,
+//		endPoint = "http://54.77.111.6:9000",
+		endPoint = "http://localhost:9000",
+		stampsEndPoint = endPoint+"/document/stamps",
+		stampsCollection = "stamps",
+		queryWhere="",
+		realCount="",
+		userObj = new Object();
+	
+	$(document).ready( function() {
+		
+		BaasBox.setEndPoint( endPoint );
+		
+		// -- log in Button action
+		$( "#loginBtn" ).click( function() {
+			
+			userObj.userName = $( "#userName" ).val();
+			userObj.password = $( "#password" ).val();
+			userObj.appCode = $( "#appCode" ).val();
+			
+			login( userObj, loginDone, loginFail );
+		});
+		
+		//-- log out Button action
+		$( "#logoutBtn" ).click( 
+			function () {
+				logOut( logOutDone, logOutFail );
+			}
+		);	
+		
+		$("#toggleTips").click(
+			function () {
+				$( "#tipsDiv" ).toggle();
+			}
+		);	
+		//-- query button action
+		$("#listBtn").click( 
+			function() {
+			
+				queryWhere = $( "#queryText" ).val();
+			
+				if( !queryWhere ){
+						alert( 'Query Line can not be empty! ');
+						return;
+				}
+				
+				getRecordCount(queryWhere);
+				
+				$("#collectionDiv").text("Waiting for response..");
+				setQueryResult(0);
+				//queryByString(q, stampsCollection, queryForTableDone, queryForTableFail );
+			}
+		);
+	});
+	
+	function getRecordCount(){
+		var ajaxObj = new Object(),
+			perPage =  $("#perPage").val(),
+			nav = "";
+		
+		ajaxObj.data = {
+			where:queryWhere,
+			fields:"count(id) as totalCount",
+		}
+		
+		ajaxObj.url = stampsEndPoint;
+		
+		ajaxObj.succesFunc = 
+			function( res ){
+				realCount = res.data[0].totalCount; 
+				$("#recordCount").text(realCount+" records found");	
+				nav = getNavtable(perPage,1);
+				$("#navDiv").html(nav);	
+				$("#navDiv1").html(nav);	
+			};
+		
+		ajaxObj.failFunc = 
+			function( jqXHR, textStatus ) {
+				console.log( textStatus );
+			};
+		
+		getByAjax(ajaxObj);
+	}
+	
+	function setQueryResult(page) {
+		var ajaxObj = new Object(),
+			perPage = $("#perPage").val(),
+			order = $("#sortSelect").val(),
+			orderDir = $( "#asc" ).is( ':checked' ) ? "asc" : "desc",
+			table = "";
+					
+		ajaxObj.data = {
+			where:queryWhere,
+			page:page,
+			recordsPerPage:perPage,
+			orderBy:order+" "+orderDir
+		};
+		
+		ajaxObj.url=stampsEndPoint;
+		
+		ajaxObj.succesFunc = 
+			function(response){
+				logObjList(response.data,"title");
+				table = createTable( response,perPage,page );
+				$("#collectionDiv").html(table);
+			};
+			
+		ajaxObj.failFunc = 	
+			function( jqXHR, textStatus ) {
+				console.log( textStatus );
+			};
+			
+		getByAjax(ajaxObj);	
+			
+	}
+
+	function controlPageFlow(){
+		if(loggedIn){
+			$("#queryDiv").show();
+			$("#loginDiv").hide();
+			$("#usernameSpan").text("User: "+$("#userName").val());
+			$("#logOutDiv").show();
+			$("#collectionDiv").show();		
+			$("#recordCount").text("");	
+			getFieldList();
+		}else{
+			$("#navDiv").text("");	
+			$("#navDiv1").text("");	
+			$("#tipsDiv").hide();
+			$("#queryDiv").hide();
+			$("#loginDiv").show();
+			$("#logOutDiv").hide();
+			$("#collectionDiv").hide();			
+		}
+	}
+	
+	// ---- field list on start ----- ///
+	function getFieldList() {
+		if( loggedIn ) {
+			
+			var optionsOfFields = "", 
+				queryData = new Object();
+				
+			queryData.data = {
+				where:"1=1",
+				page:0,
+				recordsPerPage:1
+			};
+			
+			queryData.url = stampsEndPoint;
+			
+			queryData.succesFunc = 
+				function( res ){
+					optionOfFields = createOptions( res );
+					$( 'select[id="sortSelect"]' ).empty();					
+					$( 'select[id="sortSelect"]' ).append( optionOfFields );				
+				};
+			
+			queryData.failFunc = 
+				function( jqXHR, textStatus ) {
+					console.log( textStatus );
+				};
+			
+			getByAjax(queryData);
+		}
+	}
+	
+	function getByAjax( ajaxObj ) {
+	    
+		$.ajax(
+			{url: ajaxObj.url, 
+			data: ajaxObj.data,
+			success: ajaxObj.succesFunc,
+			fail:  ajaxObj.failFunc
+		});
+	}
+	
+	function login(userObj,done,fail){
+		
+		BaasBox.appcode = userObj.appCode;
+		
+		BaasBox.login(userObj.userName,userObj.password)
+		.done(function (user) {
+			done(user);
+		})
+		.fail(function (err) {
+			fail(err);
+		})		
+	}
+	
+	function logOut(done,fail){
+		BaasBox.logout()
+	  	.done(function (res) {
+				done(res);
+	  	})
+	  	.fail(function (error) {
+	  		fail(error);
+	  	})
+	}
+	
+	function loginDone(user){
+		loggedIn = true;
+		$("#collectionDiv").text("");
+		controlPageFlow();
+	}
+	
+	function loginFail(err){
+		$("#headerMsg").text("Error! Can not log in");
+	}
+	
+	function logOutDone(response){
+  		loggedIn = false; 
+  		controlPageFlow();
+	}
+	
+	function logOutFail(error){
+		// to-do:
+	}
+
+	</script>	
+</head>
+<body>
+	
+	<div id="loginDiv">
+		<table id="loginTable">
+			<tr>
+				<td>User Name:</td> <td><input type="text" id="userName" value="admin"></td>
+			</tr>
+			<tr>	
+				<td>Password:</td>  <td><input type="password" id="password" value="admin"></td>
+			</tr>
+			<tr>	
+				<td>Application Code:</td> <td><input type="text" id="appCode" value="1234567890"></td>
+			</tr>
+			<tr>	
+				<td><button id="loginBtn" class="center">Log in</button> </td><td><p id="headerMsg">Not Logged</p></td> 
+			</tr>
+		</table>
+	</div>
+	
+	<div id="logOutDiv" style="display:none" class="logOutClass">
+		<span id="usernameSpan"></span>
+		<button id="logoutBtn" class="center"> Log out</button>
+	</div>
+		
+	<div id="queryDiv" style="display:none">
+		<div class="tipsOutDiv">
+			<a href="#" id="toggleTips">Query Tips</a><br>
+		
+			<div id="tipsDiv" style="display:none">
+				It is possible to use 
+			
+				<ul style="list-style-type:circle">
+					<li>year like '199%'</li>
+	
+					<li> title = 'Madonna and Child' </li>
+					<li> any() like '%donna and Chi%' // this will search on all fields </li>
+					<li> title IS NOT NULL </li>
+	
+					<li> 1000 is limit for record count </li>
+				</ul>
+			
+				To try more filter types: OrientDB 
+	
+				<a href="http://orientdb.com/docs/last/SQL-Where.html" target="_blank"> where conditions </a> and 
+	
+				<a href="http://orientdb.com/docs/last/SQL-Query.html" target="_blank"> SQL query</a> docs. 
+			</div>
+		</div>	
+		<br>
+		<table>
+			<tr rowspan=2>
+				<td>Query Line :</td> 
+				<td> <input type="text" id="queryText" size=100 value='1=1'> </td>
+			</tr>
+			<tr>
+				<td>Sort by :</td>
+				<td>
+					<select id="sortSelect">
+						<option value="defaultSort"> ------ </option>
+					</select>
+					Ascending :<input type="checkbox" id="asc" value="asc" selected=true>
+				</td>
+			</tr>
+			<tr>
+				<td>Record Per Page :</td>
+				<td>		
+					<select id="perPage" onChange="openPage(1,this.value);">
+						<option value="16"> 16 </option>
+						<option value="32"> 32 </option>
+						<option value="48"> 48 </option>
+						<option value="64"> 64 </option>
+						<option value="128"> 128 </option>
+					</select>
+				</td>
+			</tr>
+		</table>			
+		<br>
+		<button id="listBtn" style="font-size: 1em;"> List Stamps </button>
+		
+		<span id="recordCount"></span>
+	
+	</div><br>
+	
+	<div id="navDiv"></div>
+	
+	<div id="collectionDiv"></div>
+	
+	<div id="navDiv1"></div>
+
+</body>
+</html>
